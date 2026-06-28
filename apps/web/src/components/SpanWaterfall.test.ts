@@ -25,6 +25,7 @@ const detail: RunDetail = {
     },
     {
       spanId: 's2',
+      parentId: 's1',
       name: 'Generate answer',
       kind: 'llm',
       status: 'error',
@@ -61,5 +62,12 @@ describe('SpanWaterfall', () => {
     const bars = wrapper.findAll('li > div.h-2 > div');
     // Second span starts at 30% of the 1000ms run.
     expect(bars[1]?.attributes('style')).toContain('margin-left: 30%');
+  });
+
+  it('indents a child span by its tree depth', () => {
+    const wrapper = mount(SpanWaterfall, { props: { detail } });
+    const items = wrapper.findAll('li');
+    expect(items[0]?.attributes('style')).toContain('padding-left: 0px');
+    expect(items[1]?.attributes('style')).toContain('padding-left: 16px');
   });
 });

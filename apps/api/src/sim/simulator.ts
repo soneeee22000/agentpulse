@@ -17,6 +17,8 @@ interface PhaseSpec {
   tool?: string;
   model?: ModelProfile;
   errors: boolean;
+  spanId?: string;
+  parentId?: string;
 }
 
 interface RunContext {
@@ -102,7 +104,7 @@ export class Simulator {
       runId,
       workflow: pick(WORKFLOWS),
       startedAt: this.now(),
-      phases: buildPhases(),
+      phases: assignSpanTree(runId, buildPhases()),
       totalTokens: 0,
       totalCostUsd: 0,
     };
@@ -124,12 +126,13 @@ export class Simulator {
       return;
     }
 
-    const spanId = `${ctx.runId}-s${index}`;
+    const spanId = phase.spanId ?? `${ctx.runId}-s${index}`;
     this.send({
       type: 'span.started',
       runId: ctx.runId,
       ts: this.now(),
       spanId,
+      ...(phase.parentId ? { parentId: phase.parentId } : {}),
       name: phase.name,
       kind: phase.kind,
     });
@@ -205,6 +208,34 @@ export class Simulator {
     }, ms);
     this.timers.add(timer);
   }
+}
+
+/**
+ * Link phases into a real span tree: plan is the root; retrieve and llm are its
+ * children; a tool nests under retrieve; synthesize nests under llm.
+ */
+function assignSpanTree(runId: string, phases: PhaseSpec[]): PhaseSpec[] {
+  const idByKind: Partial<Record<SpanKind, string>> = {};
+  return phases.map((phase, index) => {
+    const spanId = `${runId}-s${index}`;
+    let parentId: string | undefined;
+    switch (phase.kind) {
+      case 'plan':
+        break;
+      case 'retrieve':
+      case 'llm':
+        parentId = idByKind.plan;
+        break;
+      case 'tool':
+        parentId = idByKind.retrieve ?? idByKind.plan;
+        break;
+      case 'synthesize':
+        parentId = idByKind.llm ?? idByKind.plan;
+        break;
+    }
+    idByKind[phase.kind] = spanId;
+    return { ...phase, spanId, ...(parentId ? { parentId } : {}) };
+  });
 }
 
 /** Build a believable phase plan, injecting at most one error. */

@@ -13,7 +13,8 @@ charts, a runs feed, and an interactive span-waterfall drawer.
 - **Runs feed** — live table with status pills, duration, spans, tokens, cost.
 - **Span waterfall** — click a run to see its trace on a real timeline, with
   per-span model / tokens / cost and surfaced errors.
-- **Design tokens** — a Tailwind v4 "control-room" dark theme; no raw colors.
+- **Design tokens** — a Tailwind v4 "control-room" dark theme; no raw colors in
+  layout, with the chart/status palette centralized in `lib/visuals.ts`.
 
 ## Develop
 

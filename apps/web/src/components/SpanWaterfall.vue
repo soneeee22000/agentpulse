@@ -10,9 +10,27 @@ interface Track {
   span: SpanRecord;
   offsetPct: number;
   widthPct: number;
+  depth: number;
 }
 
 const MIN_WIDTH_PCT = 2;
+const INDENT_PER_LEVEL_PX = 16;
+
+/** Tree depth of each span, walked from its parent chain. */
+const depthBySpan = computed<Map<string, number>>(() => {
+  const parentOf = new Map(props.detail.spans.map((s) => [s.spanId, s.parentId]));
+  const cache = new Map<string, number>();
+  const depthOf = (id: string | undefined, guard = 0): number => {
+    if (!id || guard > 16) return 0;
+    const cached = cache.get(id);
+    if (cached !== undefined) return cached;
+    const parent = parentOf.get(id);
+    const depth = parent ? depthOf(parent, guard + 1) + 1 : 0;
+    cache.set(id, depth);
+    return depth;
+  };
+  return new Map(props.detail.spans.map((s) => [s.spanId, depthOf(s.spanId)]));
+});
 
 const tracks = computed<Track[]>(() => {
   const start = props.detail.startedAt;
@@ -26,6 +44,7 @@ const tracks = computed<Track[]>(() => {
       span,
       offsetPct: Math.max(0, Math.min(100, offsetPct)),
       widthPct: Math.max(MIN_WIDTH_PCT, Math.min(100 - offsetPct, rawWidth)),
+      depth: depthBySpan.value.get(span.spanId) ?? 0,
     };
   });
 });
@@ -47,7 +66,11 @@ function meta(span: SpanRecord): string {
 
 <template>
   <ol class="space-y-2">
-    <li v-for="track in tracks" :key="track.span.spanId">
+    <li
+      v-for="track in tracks"
+      :key="track.span.spanId"
+      :style="{ paddingLeft: `${track.depth * INDENT_PER_LEVEL_PX}px` }"
+    >
       <div class="mb-1 flex items-center justify-between gap-3 text-xs">
         <span class="flex items-center gap-2">
           <span
@@ -74,7 +97,9 @@ function meta(span: SpanRecord): string {
             marginLeft: `${track.offsetPct}%`,
             width: `${track.widthPct}%`,
             background:
-              track.span.status === 'error' ? '#f43f5e' : kindVisual(track.span.kind).color,
+              track.span.status === 'error'
+                ? statusVisual('error').color
+                : kindVisual(track.span.kind).color,
           }"
         />
       </div>
