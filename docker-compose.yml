@@ -1,0 +1,29 @@
+# Local full-stack run: `docker compose up --build`
+# API on :8080, web on :3000. Defaults to the offline in-memory bus + simulator.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      PORT: '8080'
+      HOST: '0.0.0.0'
+      CORS_ORIGIN: '*'
+      BUS_DRIVER: ${BUS_DRIVER:-memory}
+      SIM_AUTOSTART: ${SIM_AUTOSTART:-true}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
+      PUBSUB_TOPIC: ${PUBSUB_TOPIC:-agentpulse-events}
+      PUBSUB_SUBSCRIPTION: ${PUBSUB_SUBSCRIPTION:-agentpulse-events-sub}
+    ports:
+      - '8080:8080'
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8080
+    ports:
+      - '3000:80'
+    depends_on:
+      - api

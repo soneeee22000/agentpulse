@@ -1,0 +1,34 @@
+{
+  "name": "agentpulse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AgentPulse — real-time, event-driven observability dashboard for agentic systems. Vue 3 + Node/TS + Fastify + GCP Pub/Sub-ready event bus.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "prepare": "npm run build --workspace @pulse/shared",
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:api": "npm run dev --workspace @pulse/api",
+    "dev:web": "npm run dev --workspace @pulse/web",
+    "build": "npm run build --workspace @pulse/shared && npm run build --workspace @pulse/api && npm run build --workspace @pulse/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test --workspaces --if-present",
+    "sim": "npm run sim --workspace @pulse/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0"
+  }
+}
