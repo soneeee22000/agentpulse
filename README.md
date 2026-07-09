@@ -10,7 +10,8 @@
 
 > Point your agents at AgentPulse and watch every run stream in live — traces,
 > tool calls, tokens, cost, latency, errors — on a dashboard fed by an **event
-> bus** that runs in-memory offline and swaps to **GCP Pub/Sub** with one env var.
+> bus** that runs in-memory offline and swaps to **GCP Pub/Sub** or **Kafka**
+> with one env var. Query it over **REST or GraphQL**, subscriptions included.
 
 ![AgentPulse — live observability dashboard for agentic systems](docs/screenshot.png)
 
@@ -32,13 +33,13 @@ Built deliberately on a modern agentic-platform stack: **Vue 3 + TypeScript
 
 It exercises the exact problems a frontier-AI platform team faces:
 
-| Challenge                                         | How this repo answers it                                                                                                     |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Architecting resilient, event-driven services** | An `EventBus` abstraction (`publish` / `subscribe`) with **in-memory** and **GCP Pub/Sub** adapters, selected by one env var |
-| **Defining the language between agents & humans** | A single `@pulse/shared` package of **Zod event-taxonomy + API contracts** consumed by producer, aggregator, SSE, and UI     |
-| **Observability as a product**                    | Rolling throughput, p50/p95 latency, error rate, token & cost — plus per-run **span waterfalls** for trace drilldown         |
-| **High-craft, data-dense frontend**               | A **Vue 3** dashboard: live stat cards, streaming time-series charts, a runs feed, and an interactive span-waterfall drawer  |
-| **Streaming UX**                                  | Server-Sent Events fan-out with snapshot hydration; the dashboard is live within one frame of connecting                     |
+| Challenge                                         | How this repo answers it                                                                                                                 |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Architecting resilient, event-driven services** | An `EventBus` abstraction (`publish` / `subscribe`) with **in-memory**, **GCP Pub/Sub**, and **Kafka** adapters, selected by one env var |
+| **Defining the language between agents & humans** | A single `@pulse/shared` package of **Zod event-taxonomy + API contracts** consumed by producer, aggregator, SSE, and UI                 |
+| **Observability as a product**                    | Rolling throughput, p50/p95 latency, error rate, token & cost — plus per-run **span waterfalls** for trace drilldown                     |
+| **High-craft, data-dense frontend**               | A **Vue 3** dashboard: live stat cards, streaming time-series charts, a runs feed, and an interactive span-waterfall drawer              |
+| **Streaming UX**                                  | Server-Sent Events fan-out with snapshot hydration; the dashboard is live within one frame of connecting                                 |
 
 ## Span waterfall
 
@@ -54,7 +55,8 @@ cost, and surfaced errors.
 | ----------- | ---------------------------------------------------------------------------------------------------------------- |
 | Frontend    | **Vue 3** (Composition API, `<script setup>`), **TypeScript strict**, Vite, Pinia, **@unovis/vue**, Tailwind CSS |
 | Backend     | **Node.js + TypeScript** (ESM, strict), **Fastify**, Server-Sent Events                                          |
-| Event bus   | `EventBus` interface → **in-memory** (default) or **Google Cloud Pub/Sub** (`@google-cloud/pubsub`)              |
+| API         | **REST** + **GraphQL** (Mercurius) — queries, mutations, and WebSocket subscriptions, with GraphiQL              |
+| Event bus   | `EventBus` interface → **in-memory** (default), **Google Cloud Pub/Sub**, or **Apache Kafka** (`kafkajs`)        |
 | Aggregation | Rolling window: throughput, p50/p95 (linear-interpolation percentile), token/cost, error rate                    |
 | Contracts   | **Zod** event taxonomy + API schemas shared across the stack (`@pulse/shared`)                                   |
 | Tooling     | npm workspaces, ESLint (flat), Prettier, Vitest, Docker, GitHub Actions CI                                       |
@@ -62,8 +64,9 @@ cost, and surfaced errors.
 > **Runs fully offline.** The default in-memory bus plus a built-in simulator
 > emit realistic synthetic traffic (believable latency spread, ~6% error rate,
 > per-model token/cost) — so you can clone, install, and watch a live dashboard
-> with **zero API keys or cloud setup**. Set `BUS_DRIVER=pubsub` to route the
-> same events through Google Cloud Pub/Sub.
+> with **zero API keys or cloud setup**. Set `BUS_DRIVER=pubsub` or
+> `BUS_DRIVER=kafka` to route the same events through Google Cloud Pub/Sub or a
+> real Kafka log — nothing downstream of the bus changes.
 
 ---
 
@@ -78,7 +81,7 @@ flowchart LR
 
   subgraph API["apps/api · Node + Fastify"]
     Ingest[POST /api/events<br/>Zod-validated]
-    Bus{{EventBus<br/>memory · pubsub}}
+    Bus{{EventBus<br/>memory · pubsub · kafka}}
     Proj[Projector]
     Store[(Runs + spans<br/>ring buffer)]
     Agg[Aggregator<br/>rolling metrics]
@@ -166,6 +169,53 @@ npm run dev:api
 
 > The Pub/Sub adapter is real, reviewable code; the demo runs the in-memory bus.
 > The repo is **GCP-ready**, not a hosted deployment.
+
+### Route events through Kafka
+
+A single-node Redpanda broker (Kafka-API compatible, no ZooKeeper) ships behind a
+compose profile, so this one is runnable locally in seconds:
+
+```bash
+docker compose --profile kafka up -d kafka   # broker on localhost:9092
+BUS_DRIVER=kafka npm run dev:api
+```
+
+Messages are keyed by `runId`, so every event for a run lands on one partition
+and is consumed in publish order. Delivery is at-least-once; the projector folds
+events into a keyed map, so a replayed event converges to the same state.
+
+### Query it with GraphQL
+
+```bash
+npm run dev:api
+open http://localhost:8080/graphiql
+```
+
+```graphql
+{
+  runs(limit: 5, status: error) {
+    total
+    runs {
+      runId
+      workflow
+      durationMs
+      spans {
+        spanId
+        kind
+        status
+      }
+    }
+  }
+}
+```
+
+`Run.spans` is a field resolver, so listing runs never loads span trees — a
+client pays for them only on the runs it opens. Live events stream over a
+WebSocket subscription fed by the same fan-out hub as `/api/stream`:
+
+```bash
+npm run smoke:subscription   # asserts live events arrive over graphql-transport-ws
+```
 
 ### Docker
 

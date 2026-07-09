@@ -2,6 +2,7 @@ import cors from '@fastify/cors';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { config, type Config } from './config.js';
 import { AppContext } from './context.js';
+import { registerGraphql } from './graphql/index.js';
 import { registerRoutes } from './routes/index.js';
 
 export interface BuildServerOptions {
@@ -12,8 +13,9 @@ export interface BuildServerOptions {
 
 /**
  * Build the Fastify app: CORS, the event-driven pipeline (bus → projector →
- * store/aggregator/SSE), and routes. The metric ticker and optional simulator
- * are started here so the dashboard is live the moment the server is up.
+ * store/aggregator/SSE), REST routes, and the GraphQL endpoint. The metric
+ * ticker and optional simulator are started here so the dashboard is live the
+ * moment the server is up.
  */
 export async function buildServer(options: BuildServerOptions = {}): Promise<FastifyInstance> {
   const cfg = options.config ?? config;
@@ -26,6 +28,7 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
   });
 
   registerRoutes(app, ctx);
+  await registerGraphql(app, ctx, { graphiql: cfg.GRAPHIQL });
   ctx.start();
 
   app.decorate('appContext', ctx);
