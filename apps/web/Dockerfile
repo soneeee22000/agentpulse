@@ -5,7 +5,9 @@ COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
-RUN npm ci
+# --ignore-scripts: the root `prepare` script builds @pulse/shared, which needs
+# sources this layer has not copied yet. The builds below run it explicitly.
+RUN npm ci --ignore-scripts
 COPY . .
 ARG VITE_API_URL=http://localhost:8080
 ENV VITE_API_URL=$VITE_API_URL

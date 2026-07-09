@@ -1,0 +1,26 @@
+# Never ship the host's node_modules into the image. npm workspaces links
+# packages by symlink, and a symlink created on the host points at a host path
+# that does not exist inside the container — so `COPY . .` would silently
+# clobber the modules npm just installed and the app would fail to resolve
+# @pulse/shared at runtime. Each stage installs its own dependencies.
+node_modules
+**/node_modules
+
+# Build output — every stage rebuilds from source.
+dist
+**/dist
+*.tsbuildinfo
+
+.git
+.github
+.env
+.env.*
+!.env.example
+
+npm-debug.log*
+coverage
+**/coverage
+Dockerfile
+**/Dockerfile
+.dockerignore
+docker-compose.yml
