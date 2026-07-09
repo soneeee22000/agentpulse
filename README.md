@@ -13,6 +13,15 @@
 > bus** that runs in-memory offline and swaps to **GCP Pub/Sub** or **Kafka**
 > with one env var. Query it over **REST or GraphQL**, subscriptions included.
 
+**[Live dashboard](https://agentpulse-web-171722935814.europe-west1.run.app)** ·
+**[Live GraphiQL](https://agentpulse-api-171722935814.europe-west1.run.app/graphiql)** ·
+**[Live API health](https://agentpulse-api-171722935814.europe-west1.run.app/api/health)**
+
+> Both are really running on Cloud Run in keyless simulator mode — no API keys,
+> no cloud credentials, no recording. Open GraphiQL and introspect the schema.
+> They scale to zero, so the first request after an idle period may take a
+> moment to wake.
+
 ![AgentPulse — live observability dashboard for agentic systems](docs/screenshot.png)
 
 A real-time, **event-driven observability dashboard for agentic systems**. Agents
