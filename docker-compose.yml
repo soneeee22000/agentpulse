@@ -1,5 +1,9 @@
 # Local full-stack run: `docker compose up --build`
 # API on :8080, web on :3000. Defaults to the offline in-memory bus + simulator.
+#
+# To run the same stack over a real Kafka log instead:
+#   docker compose --profile kafka up --build
+#   BUS_DRIVER=kafka docker compose --profile kafka up --build
 services:
   api:
     build:
@@ -11,11 +15,39 @@ services:
       CORS_ORIGIN: '*'
       BUS_DRIVER: ${BUS_DRIVER:-memory}
       SIM_AUTOSTART: ${SIM_AUTOSTART:-true}
+      GRAPHIQL: ${GRAPHIQL:-true}
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
       PUBSUB_TOPIC: ${PUBSUB_TOPIC:-agentpulse-events}
       PUBSUB_SUBSCRIPTION: ${PUBSUB_SUBSCRIPTION:-agentpulse-events-sub}
+      # In-network listener; the host reaches the same broker on localhost:9092.
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_TOPIC: ${KAFKA_TOPIC:-agentpulse-events}
+      KAFKA_GROUP_ID: ${KAFKA_GROUP_ID:-agentpulse-api}
+      KAFKA_CLIENT_ID: ${KAFKA_CLIENT_ID:-agentpulse}
     ports:
       - '8080:8080'
+
+  # Single-node Redpanda: Kafka-API compatible, no ZooKeeper, boots in seconds.
+  # Only started with `--profile kafka`, so the default run stays dependency-free.
+  kafka:
+    profiles: ['kafka']
+    image: redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --overprovisioned
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://kafka:29092,OUTSIDE://localhost:9092
+    ports:
+      - '9092:9092'
+    healthcheck:
+      test: ['CMD-SHELL', 'rpk cluster health | grep -q "Healthy:.*true"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   web:
     build:

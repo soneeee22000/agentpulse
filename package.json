@@ -2,7 +2,7 @@
   "name": "agentpulse",
   "version": "0.1.0",
   "private": true,
-  "description": "AgentPulse — real-time, event-driven observability dashboard for agentic systems. Vue 3 + Node/TS + Fastify + GCP Pub/Sub-ready event bus.",
+  "description": "AgentPulse — real-time, event-driven observability dashboard for agentic systems. Vue 3 + Node/TS + Fastify, REST + GraphQL (subscriptions), pluggable event bus: in-memory · GCP Pub/Sub · Kafka.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -22,7 +22,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "npm run test --workspaces --if-present",
-    "sim": "npm run sim --workspace @pulse/api"
+    "sim": "npm run sim --workspace @pulse/api",
+    "smoke:subscription": "node scripts/smoke-subscription.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

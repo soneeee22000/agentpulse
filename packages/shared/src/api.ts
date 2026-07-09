@@ -7,7 +7,7 @@ import { MetricsSnapshotSchema, RunSummarySchema } from './metrics.js';
  * dashboard needs streams over `/api/stream`, with REST for point lookups.
  */
 
-export const BusDriverSchema = z.enum(['memory', 'pubsub']);
+export const BusDriverSchema = z.enum(['memory', 'pubsub', 'kafka']);
 export type BusDriver = z.infer<typeof BusDriverSchema>;
 
 /** Ingest a batch of agent events. */

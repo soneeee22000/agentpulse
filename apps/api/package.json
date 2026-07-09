@@ -19,6 +19,9 @@
     "@google-cloud/pubsub": "^4.9.0",
     "@pulse/shared": "*",
     "fastify": "^5.2.0",
+    "graphql": "^16.14.2",
+    "kafkajs": "^2.2.4",
+    "mercurius": "^16.9.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
