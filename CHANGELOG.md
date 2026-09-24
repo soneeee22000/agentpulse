@@ -13,6 +13,8 @@ conventional commits.
   state; no auth), a verified Results section and a single live host.
 - Add `docs/WHY.md` with the problem statement and a "what this is not" list.
 - Bring `docs/ARCHITECTURE.md` up to date with the Kafka driver and the Cloud Run demo.
+- Correct the Kafka replay note: the projector is not idempotent, so a redelivered event
+  is counted twice.
 
 ## [0.1.0] - 2026-07-09
 

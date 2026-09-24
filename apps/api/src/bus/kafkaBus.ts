@@ -29,8 +29,9 @@ const MAX_ERROR_CHARS = 200;
  *   different runs is not guaranteed, and the read model does not need it.
  * - **At-least-once delivery.** `consumer.run` auto-commits offsets after the
  *   handler resolves, so a crash between handling and commit replays the event.
- *   {@link RunStore.apply} is a fold over a keyed map — applying the same event
- *   twice converges to the same state — so replay is safe.
+ *   The projector is not idempotent: a replayed `llm.usage` or errored
+ *   `span.ended` is added to the run's totals again, and a replayed `run.ended`
+ *   is counted twice by the aggregator. There is no dedup by event id.
  *
  * Connections are established lazily and memoized: `publish` connects the
  * producer on first use, `subscribe` starts the consumer on first subscriber.

@@ -39,9 +39,11 @@ interface EventBus {
   in-memory bus only approximates.
 - **`KafkaBus`** — publishes to a Kafka topic with `kafkajs`, keyed by `runId`
   so every event of a run lands on one partition and is consumed in order.
-  Delivery is at-least-once; the projector folds events into a keyed map, so a
-  replayed event converges to the same state. A single-node Redpanda broker
-  ships behind the `kafka` compose profile.
+  Delivery is at-least-once, and the projector is not idempotent: a replayed
+  `llm.usage` adds its tokens and cost to the run again, a replayed errored
+  `span.ended` bumps the run's error count again, and a replayed `run.ended` is
+  counted twice in the rolling metrics. There is no dedup by event id. A
+  single-node Redpanda broker ships behind the `kafka` compose profile.
 
 `createBus(config)` picks the adapter from `BUS_DRIVER`. **Nothing downstream of
 the bus knows which transport is active** — the projector, store, aggregator, SSE
