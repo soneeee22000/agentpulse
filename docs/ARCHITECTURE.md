@@ -13,7 +13,7 @@ producer → ingest → EventBus → projector → { RunStore, Aggregator, SseHu
    `npm run sim` load generator, or any agent that POSTs to `/api/events`.
 2. **Ingest** (`POST /api/events`) validates each event against the shared Zod
    taxonomy and publishes it to the bus.
-3. **EventBus** fans events out to subscribers. One interface, two adapters
+3. **EventBus** fans events out to subscribers. One interface, three adapters
    (see below).
 4. The **projector** (the single bus subscriber, in `AppContext`) folds every
    event into three read models at once.
@@ -24,7 +24,7 @@ producer → ingest → EventBus → projector → { RunStore, Aggregator, SseHu
 
 ```ts
 interface EventBus {
-  readonly driver: 'memory' | 'pubsub';
+  readonly driver: 'memory' | 'pubsub' | 'kafka';
   publish(event: AgentEvent): Promise<void>;
   subscribe(handler: EventHandler): void;
   close(): Promise<void>;
@@ -37,15 +37,21 @@ interface EventBus {
   through GCP and arrive back via the subscription. This is the genuine
   event-driven decoupling (multiple instances, durable transport) that the
   in-memory bus only approximates.
+- **`KafkaBus`** — publishes to a Kafka topic with `kafkajs`, keyed by `runId`
+  so every event of a run lands on one partition and is consumed in order.
+  Delivery is at-least-once; the projector folds events into a keyed map, so a
+  replayed event converges to the same state. A single-node Redpanda broker
+  ships behind the `kafka` compose profile.
 
 `createBus(config)` picks the adapter from `BUS_DRIVER`. **Nothing downstream of
 the bus knows which transport is active** — the projector, store, aggregator, SSE
-hub, and the entire frontend are identical in both modes. That seam is the whole
+hub, and the entire frontend are identical in every mode. That seam is the whole
 point: it's how you move from a laptop to a fleet without rewriting the app.
 
-> Honesty note: the Pub/Sub adapter is real, reviewable code. It is **not
-> deployed** — the live demo runs the in-memory bus. The claim is "GCP-ready
-> event-driven architecture," not "running on GCP."
+> Honesty note: the Pub/Sub and Kafka adapters are real, reviewable code, unit
+> tested against mocked clients. Neither is deployed. The live demo runs on
+> Cloud Run with the in-memory bus and the simulator, so its state is
+> per-instance and lost when an instance scales to zero.
 
 ## Read models
 
