@@ -29,3 +29,4 @@ coverage/
 # AI tooling artifacts (never commit)
 .claude/
 .sixth/
+.cursor/
